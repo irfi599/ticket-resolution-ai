@@ -1,0 +1,70 @@
+[
+    {
+        "article_id": "KB001",
+        "title": "Troubleshooting Dropped Calls",
+        "problem": "Customer is experiencing frequent dropped calls.",
+        "symptoms": [
+            "Calls disconnect unexpectedly",
+            "Calls drop repeatedly",
+            "Voice service is unstable"
+        ],
+        "steps": [
+            "Restart the phone",
+            "Check for software updates",
+            "Switch network mode",
+            "Reset network settings"
+        ],
+        "escalation_condition": "If the issue continues after troubleshooting, escalate to network support."
+    },
+    {
+        "article_id": "KB002",
+        "title": "Troubleshooting Slow Mobile Data",
+        "problem": "Customer is experiencing slow mobile internet or data connectivity.",
+        "symptoms": [
+            "Mobile internet is slow",
+            "Web pages load slowly",
+            "Apps have difficulty connecting",
+            "Data connection is unstable"
+        ],
+        "steps": [
+            "Restart the phone",
+            "Check for software updates",
+            "Switch network mode",
+            "Reset network settings"
+        ],
+        "escalation_condition": "If mobile data remains slow after troubleshooting, escalate to network support."
+    },
+    {
+        "article_id": "KB003",
+        "title": "Troubleshooting Poor Network Reception",
+        "problem": "Customer is experiencing weak or poor network reception.",
+        "symptoms": [
+            "Weak signal",
+            "Poor reception",
+            "Network signal drops frequently"
+        ],
+        "steps": [
+            "Restart the phone",
+            "Check the current network mode",
+            "Move to an area with better signal coverage",
+            "Reset network settings"
+        ],
+        "escalation_condition": "If poor reception continues, investigate possible network coverage issues or escalate to network support."
+    },
+    {
+        "article_id": "KB004",
+        "title": "Network Issue Escalation",
+        "problem": "Customer continues to experience network problems after standard troubleshooting.",
+        "symptoms": [
+            "Dropped calls continue",
+            "Data connectivity problems continue",
+            "Standard troubleshooting has not resolved the issue"
+        ],
+        "steps": [
+            "Confirm that standard troubleshooting has been attempted",
+            "Record the customer's symptoms",
+            "Escalate the issue to network support"
+        ],
+        "escalation_condition": "Escalate when the issue persists after standard troubleshooting."
+    }
+]

@@ -1,0 +1,7 @@
+pandas
+datasets
+sentence-transformers
+torch
+transformers
+requests
+ollama

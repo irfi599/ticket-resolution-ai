@@ -1,0 +1,50 @@
+[
+    {
+        "case_id": "0e79164e7b8b4633bc1424637eacab32",
+        "customer_problem": "Hi Marilou, thanks for picking up. I've been having some problems with my phone service lately. I've been getting a lot of dropped calls, and my data connection has been really slow. It's been really frustrating.",
+        "problem_text": "Hi Marilou, thanks for picking up. I've been having some problems with my phone service lately. I've been getting a lot of dropped calls, and my data connection has been really slow. It's been really frustrating. Sure, my [REDACTED PIN]. Well, I have an iPhone 12 Pro, and it's been happening everywhere I go. I live in the city, so I wouldn't think it would be a coverage issue. Yeah, I've tried that already. Yes, I haven't. How do I do that? Okay, got it. Hmm, okay. I'll give that a try. Alright, I'll try that too. Thanks for walking me through all of this, Marilou. No, that's all for now. Thanks again, Marilou.",
+        "customer_text": "Hi Marilou, thanks for picking up. I've been having some problems with my phone service lately. I've been getting a lot of dropped calls, and my data connection has been really slow. It's been really frustrating. Sure, my [REDACTED PIN]. Well, I have an iPhone 12 Pro, and it's been happening everywhere I go. I live in the city, so I wouldn't think it would be a coverage issue. Yeah, I've tried that already. Yes, I haven't. How do I do that? Okay, got it. Hmm, okay. I'll give that a try. Alright, I'll try that too. Thanks for walking me through all of this, Marilou. No, that's all for now. Thanks again, Marilou.",
+        "device": "iPhone 12 Pro",
+        "issue_type": "Dropped calls, Slow mobile data",
+        "sentiment": "Negative",
+        "troubleshooting_steps": [
+            "Restart the phone",
+            "Check for software updates",
+            "Switch network mode",
+            "Reset network settings"
+        ],
+        "outcome": "Troubleshooting provided",
+        "source_conversation": "0e79164e7b8b4633bc1424637eacab32"
+    },
+    {
+        "case_id": "98a6dbc997614ceb8e0734dda38b2524",
+        "customer_problem": "Hi, I'm having some issues with my phone service. I've been experiencing dropped calls, poor reception, and data connectivity problems.",
+        "problem_text": "Hi, I'm having some issues with my phone service. I've been experiencing dropped calls, poor reception, and data connectivity problems. Sure, my [REDACTED PIN]. Okay, let me check again. My [REDACTED PIN]. Alright, my [REDACTED PIN]. Yeah, like I said, I've been experiencing dropped calls, poor reception, and data connectivity problems. It's been really frustrating. Sure, I have an iPhone 12 Pro and I live in downtown Los Angeles. Yes, that sounds great. Thank you! No, that's all. Thanks you so much for your help, Ray.",
+        "customer_text": "Hi, I'm having some issues with my phone service. I've been experiencing dropped calls, poor reception, and data connectivity problems. Sure, my [REDACTED PIN]. Okay, let me check again. My [REDACTED PIN]. Alright, my [REDACTED PIN]. Yeah, like I said, I've been experiencing dropped calls, poor reception, and data connectivity problems. It's been really frustrating. Sure, I have an iPhone 12 Pro and I live in downtown Los Angeles. Yes, that sounds great. Thank you! No, that's all. Thanks you so much for your help, Ray.",
+        "device": "iPhone 12 Pro",
+        "issue_type": "Dropped calls, Poor reception",
+        "sentiment": "Negative",
+        "troubleshooting_steps": [
+            "Escalate the issue to engineering"
+        ],
+        "outcome": "Escalated",
+        "source_conversation": "98a6dbc997614ceb8e0734dda38b2524"
+    },
+    {
+        "case_id": "9db3dbf522c3487691ce42dd23658e0a",
+        "customer_problem": "Hi Edythe, I'm having some issues with my phone service. I've been experiencing dropped calls, poor reception, and data connectivity problems.",
+        "problem_text": "Hi Edythe, I'm having some issues with my phone service. I've been experiencing dropped calls, poor reception, and data connectivity problems. Sure, my account number is #XXXXX. Oh, I see. When do you expect the issue to be resolved? Yes, I've tried both of those things and they haven't helped. Is there anything else I can do? Okay, thank you for letting me know. Sure, yes, I'd be happy to provide feedback. Thank you, Edythe. Bye for",
+        "customer_text": "Hi Edythe, I'm having some issues with my phone service. I've been experiencing dropped calls, poor reception, and data connectivity problems. Sure, my account number is #XXXXX. Oh, I see. When do you expect the issue to be resolved? Yes, I've tried both of those things and they haven't helped. Is there anything else I can do? Okay, thank you for letting me know. Sure, yes, I'd be happy to provide feedback. Thank you, Edythe. Bye for",
+        "device": "Not identified",
+        "issue_type": "Dropped calls, Poor reception",
+        "sentiment": "Neutral",
+        "troubleshooting_steps": [
+            "Restart the phone",
+            "Switch network mode",
+            "Escalate the issue to engineering",
+            "Refer the customer to dedicated support"
+        ],
+        "outcome": "Escalated",
+        "source_conversation": "9db3dbf522c3487691ce42dd23658e0a"
+    }
+]

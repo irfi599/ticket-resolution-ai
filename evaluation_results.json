@@ -1,0 +1,7 @@
+{
+    "test_cases": 5,
+    "average_retrieval_relevance": 1.0,
+    "source_correctness": 1.0,
+    "average_step_coverage": 1.0,
+    "average_retrieval_latency_seconds": 0.0154
+}
