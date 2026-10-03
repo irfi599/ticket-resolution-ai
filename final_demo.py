@@ -1,6 +1,8 @@
+import os
 import json
 import requests
 import numpy as np
+
 from sentence_transformers import SentenceTransformer
 
 
@@ -8,36 +10,42 @@ from sentence_transformers import SentenceTransformer
 # CONFIGURATION
 # ============================================================
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "llama3.2:3b"
+HISTORICAL_FILE = "historical_cases_10000.json"
+KB_FILE = "knowledge_base.json"
+EMBEDDING_FILE = "historical_embeddings.npy"
 
-TOP_HISTORICAL = 2
-TOP_KB = 2
+MODEL_NAME = "all-MiniLM-L6-v2"
+OLLAMA_MODEL = "llama3.2:3b"
+
+TOP_HISTORICAL_CASES = 5
+TOP_KB_ARTICLES = 2
 
 
 # ============================================================
-# LOAD DATA
+# LOAD PROJECT DATA
 # ============================================================
 
+print()
 print("Loading project data...")
 
-with open("historical_cases.json", "r", encoding="utf-8") as file:
+with open(HISTORICAL_FILE, "r", encoding="utf-8") as file:
     historical_cases = json.load(file)
 
-with open("knowledge_base.json", "r", encoding="utf-8") as file:
+with open(KB_FILE, "r", encoding="utf-8") as file:
     knowledge_base = json.load(file)
 
-print("Historical cases loaded:", len(historical_cases))
-print("Knowledge base articles loaded:", len(knowledge_base))
+print(f"Historical cases loaded: {len(historical_cases)}")
+print(f"Knowledge base articles loaded: {len(knowledge_base)}")
 
 
 # ============================================================
 # LOAD EMBEDDING MODEL
 # ============================================================
 
-print("\nLoading embedding model...")
+print()
+print("Loading embedding model...")
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
+model = SentenceTransformer(MODEL_NAME)
 
 print("Embedding model loaded!")
 
@@ -56,140 +64,106 @@ query = (
 # COMPLAINT ANALYSIS
 # ============================================================
 
-def analyze_complaint(text):
+def analyze_complaint(query):
 
-    text_lower = text.lower()
-
-    # --------------------------------------------------------
-    # CATEGORY
-    # --------------------------------------------------------
+    text = query.lower()
 
     categories = []
 
-    if "drop" in text_lower and "call" in text_lower:
+    if "drop" in text and "call" in text:
         categories.append("Dropped calls")
 
-    if (
-        "slow" in text_lower
-        and (
-            "data" in text_lower
-            or "internet" in text_lower
-        )
+    if "slow" in text and (
+        "data" in text or
+        "internet" in text
     ):
         categories.append("Slow mobile data")
 
     if (
-        "poor reception" in text_lower
-        or "weak signal" in text_lower
+        "poor reception" in text or
+        "weak signal" in text
     ):
         categories.append("Poor network reception")
 
-    # --------------------------------------------------------
-    # INTENT
-    # --------------------------------------------------------
+    if "network" in text or "signal" in text:
+        if "Network issue" not in categories:
+            categories.append("Network issue")
 
-    if categories:
+    if not categories:
+        categories.append("General support issue")
+
+    if (
+        "call" in text or
+        "internet" in text or
+        "data" in text
+    ):
+        product = "Mobile voice and data"
+    else:
+        product = "Telecom service"
+
+    negative_words = [
+        "frustrating",
+        "frustrated",
+        "angry",
+        "disappointed",
+        "annoying",
+        "terrible",
+        "unhappy",
+        "hate",
+        "worst"
+    ]
+
+    negative_count = sum(
+        1
+        for word in negative_words
+        if word in text
+    )
+
+    if negative_count >= 2:
+        sentiment = "Negative"
+    else:
+        sentiment = "Neutral"
+
+    severity_words = [
+        "emergency",
+        "completely",
+        "cannot",
+        "unable",
+        "critical"
+    ]
+
+    if any(
+        word in text
+        for word in severity_words
+    ):
+        severity = "High"
+
+    elif any(
+        word in text
+        for word in [
+            "slow",
+            "dropping",
+            "disconnect",
+            "problem"
+        ]
+    ):
+        severity = "Medium"
+
+    else:
+        severity = "Low"
+
+    if (
+        "call" in text or
+        "data" in text or
+        "internet" in text
+    ):
         intent = "Network connectivity issue"
     else:
         intent = "General support issue"
 
-    # --------------------------------------------------------
-    # PRODUCT
-    # --------------------------------------------------------
-
-    has_voice = (
-        "call" in text_lower
-        or "calls" in text_lower
-    )
-
-    has_data = (
-        "data" in text_lower
-        or "internet" in text_lower
-    )
-
-    if has_voice and has_data:
-        product = "Mobile voice and data"
-    elif has_voice:
-        product = "Mobile voice service"
-    elif has_data:
-        product = "Mobile data service"
-    else:
-        product = "Telecom service"
-
-    # --------------------------------------------------------
-    # SENTIMENT
-    # --------------------------------------------------------
-
-    negative_words = [
-        "frustrated",
-        "frustrating",
-        "angry",
-        "annoying",
-        "terrible",
-        "disappointed",
-        "unhappy",
-        "problem",
-        "issue",
-        "not working",
-        "can't",
-        "cannot"
-    ]
-
-    negative_count = 0
-
-    for word in negative_words:
-
-        if word in text_lower:
-            negative_count += 1
-
-    if negative_count >= 2:
-        sentiment = "Negative"
-    elif negative_count == 1:
-        sentiment = "Slightly negative"
-    else:
-        sentiment = "Neutral"
-
-    # --------------------------------------------------------
-    # SEVERITY
-    # --------------------------------------------------------
-
-    high_severity_words = [
-        "emergency",
-        "completely down",
-        "no service",
-        "cannot make calls",
-        "unable to call",
-        "all day"
-    ]
-
-    medium_severity_words = [
-        "keep dropping",
-        "repeatedly",
-        "very slow",
-        "frequent",
-        "constant",
-        "keeps"
-    ]
-
-    severity = "Low"
-
-    for word in high_severity_words:
-
-        if word in text_lower:
-            severity = "High"
-            break
-
-    if severity == "Low":
-
-        for word in medium_severity_words:
-
-            if word in text_lower:
-                severity = "Medium"
-                break
-
     return {
         "intent": intent,
-        "category": categories if categories else ["Other"],
+        "categories": categories,
         "product": product,
         "severity": severity,
         "sentiment": sentiment
@@ -197,337 +171,370 @@ def analyze_complaint(text):
 
 
 # ============================================================
-# RUN COMPLAINT ANALYSIS
+# DISPLAY COMPLAINT ANALYSIS
 # ============================================================
 
 analysis = analyze_complaint(query)
 
-
-# ============================================================
-# DISPLAY COMPLAINT ANALYSIS
-# ============================================================
-
-print("\n==========================================")
-print("       CUSTOMER COMPLAINT ANALYSIS")
+print()
+print("==========================================")
+print("CUSTOMER COMPLAINT ANALYSIS")
 print("==========================================")
 
-print("\nCustomer Complaint:")
+print()
+print("Customer Complaint:")
 print(query)
 
-print("\nIntent:")
+print()
+print("Intent:")
 print(analysis["intent"])
 
-print("\nCategory:")
+print()
+print("Category:")
 
-for category in analysis["category"]:
-    print(" -", category)
+for category in analysis["categories"]:
+    print(f" - {category}")
 
-print("\nProduct:")
+print()
+print("Product:")
 print(analysis["product"])
 
-print("\nSeverity:")
+print()
+print("Severity:")
 print(analysis["severity"])
 
-print("\nSentiment:")
+print()
+print("Sentiment:")
 print(analysis["sentiment"])
 
 
 # ============================================================
-# PREPARE HISTORICAL CASES
+# PREPARE HISTORICAL CASE INDEX
 # ============================================================
 
-historical_documents = [
-    case["problem_text"]
-    for case in historical_cases
-]
+print()
+print("==========================================")
+print("PREPARING HISTORICAL CASE INDEX")
+print("==========================================")
+
+case_texts = []
+
+for case in historical_cases:
+
+    text = (
+        str(case.get("problem_text", "")) + " "
+        + str(case.get("issue_type", "")) + " "
+        + str(case.get("device", "")) + " "
+        + str(case.get("sentiment", "")) + " "
+        + " ".join(
+            case.get("troubleshooting_steps", [])
+        )
+    )
+
+    case_texts.append(text)
 
 
 # ============================================================
-# PREPARE KNOWLEDGE BASE
+# LOAD OR CREATE HISTORICAL EMBEDDINGS
 # ============================================================
 
-kb_documents = []
+if (
+    os.path.exists(EMBEDDING_FILE)
+    and len(np.load(EMBEDDING_FILE, mmap_mode="r"))
+    == len(historical_cases)
+):
+
+    print()
+    print("Saved historical embeddings found.")
+    print("Loading historical case embeddings...")
+
+    historical_embeddings = np.load(
+        EMBEDDING_FILE
+    )
+
+    print(
+        f"Historical case embeddings loaded: "
+        f"{len(historical_embeddings)}"
+    )
+
+else:
+
+    print()
+    print(
+        f"Creating embeddings for "
+        f"{len(historical_cases)} historical cases..."
+    )
+
+    historical_embeddings = model.encode(
+        case_texts,
+        batch_size=64,
+        show_progress_bar=True,
+        normalize_embeddings=True
+    )
+
+    np.save(
+        EMBEDDING_FILE,
+        historical_embeddings
+    )
+
+    print()
+    print(
+        "Historical case embeddings "
+        "created and saved!"
+    )
+
+
+# ============================================================
+# KNOWLEDGE BASE EMBEDDINGS
+# ============================================================
+
+print()
+print("Creating knowledge-base embeddings...")
+
+kb_texts = []
 
 for article in knowledge_base:
 
-    document = (
+    text = (
         article["title"]
-        + ". "
+        + " "
         + article["problem"]
-        + ". "
+        + " "
         + " ".join(article["symptoms"])
     )
 
-    kb_documents.append(document)
+    kb_texts.append(text)
 
-
-# ============================================================
-# CREATE EMBEDDINGS
-# ============================================================
-
-print("\n==========================================")
-print("       SEMANTIC RETRIEVAL")
-print("==========================================")
-
-print("\nCreating embeddings...")
-
-historical_embeddings = model.encode(
-    historical_documents
-)
 
 kb_embeddings = model.encode(
-    kb_documents
+    kb_texts,
+    batch_size=32,
+    show_progress_bar=True,
+    normalize_embeddings=True
 )
+
+print("Knowledge-base embeddings created!")
+
+
+# ============================================================
+# SEMANTIC RETRIEVAL
+# ============================================================
+
+print()
+print("==========================================")
+print("SEMANTIC RETRIEVAL")
+print("==========================================")
+
+print()
+print(
+    f"Searching {len(historical_cases)} "
+    "historical cases..."
+)
+
 
 query_embedding = model.encode(
-    query
+    query,
+    normalize_embeddings=True
 )
 
-print("Embeddings created!")
-
 
 # ============================================================
-# COSINE SIMILARITY
+# HISTORICAL CASE RETRIEVAL
 # ============================================================
 
-def cosine_similarity(vector_a, vector_b):
+historical_similarities = np.dot(
+    historical_embeddings,
+    query_embedding
+)
 
-    numerator = np.dot(
-        vector_a,
-        vector_b
-    )
-
-    denominator = (
-        np.linalg.norm(vector_a)
-        * np.linalg.norm(vector_b)
-    )
-
-    if denominator == 0:
-        return 0.0
-
-    return numerator / denominator
-
-
-# ============================================================
-# SEARCH HISTORICAL CASES
-# ============================================================
+top_historical_indices = np.argsort(
+    historical_similarities
+)[::-1][
+    :TOP_HISTORICAL_CASES
+]
 
 historical_results = []
 
-for i, embedding in enumerate(
-    historical_embeddings
-):
-
-    score = cosine_similarity(
-        query_embedding,
-        embedding
-    )
+for index in top_historical_indices:
 
     historical_results.append(
-        (
-            float(score),
-            historical_cases[i]
-        )
+        {
+            "case": historical_cases[index],
+            "score": float(
+                historical_similarities[index]
+            )
+        }
     )
 
 
-historical_results.sort(
-    reverse=True,
-    key=lambda x: x[0]
-)
-
-top_historical = historical_results[
-    :TOP_HISTORICAL
-]
+print()
+print("Top Historical Cases:")
 
 
-# ============================================================
-# SEARCH KNOWLEDGE BASE
-# ============================================================
-
-kb_results = []
-
-for i, embedding in enumerate(
-    kb_embeddings
-):
-
-    score = cosine_similarity(
-        query_embedding,
-        embedding
-    )
-
-    kb_results.append(
-        (
-            float(score),
-            knowledge_base[i]
-        )
-    )
-
-
-kb_results.sort(
-    reverse=True,
-    key=lambda x: x[0]
-)
-
-top_kb = kb_results[
-    :TOP_KB
-]
-
-
-# ============================================================
-# DISPLAY RETRIEVAL RESULTS
-# ============================================================
-
-print("\n========== HISTORICAL CASES ==========")
-
-for rank, (score, case) in enumerate(
-    top_historical,
+for rank, result in enumerate(
+    historical_results,
     start=1
 ):
 
-    print("\n------------------------------------------")
+    case = result["case"]
 
-    print("Rank:", rank)
+    print()
+    print(f"Rank {rank}")
 
     print(
-        f"Similarity Score: {score:.4f}"
+        f"Similarity: "
+        f"{result['score']:.4f}"
+    )
+
+    # Case ID
+    case_id = case.get(
+        "case_id",
+        case.get(
+            "conversation_id",
+            case.get("id", "N/A")
+        )
     )
 
     print(
-        "Case ID:",
-        case["case_id"]
+        f"Case ID: "
+        f"{case_id}"
     )
 
     print(
-        "Issue:",
-        case["issue_type"]
+        f"Issue: "
+        f"{case.get('issue_type', 'N/A')}"
     )
 
     print(
-        "Device:",
-        case["device"]
+        f"Device: "
+        f"{case.get('device', 'N/A')}"
     )
 
     print(
-        "Sentiment:",
-        case["sentiment"]
+        f"Sentiment: "
+        f"{case.get('sentiment', 'N/A')}"
     )
 
-    print("\nResolution Steps:")
+    print(
+        f"Outcome: "
+        f"{case.get('outcome', 'N/A')}"
+    )
 
-    if case["troubleshooting_steps"]:
+    print("Troubleshooting:")
 
-        for step in case["troubleshooting_steps"]:
-            print(" -", step)
+    steps = case.get(
+        "troubleshooting_steps",
+        []
+    )
+
+    if steps:
+
+        for step in steps:
+            print(f" - {step}")
 
     else:
 
-        print(" - No troubleshooting steps identified")
+        print(" - None recorded")
 
-    print(
-        "\nOutcome:",
-        case["outcome"]
+
+# ============================================================
+# KNOWLEDGE BASE RETRIEVAL
+# ============================================================
+
+kb_similarities = np.dot(
+    kb_embeddings,
+    query_embedding
+)
+
+top_kb_indices = np.argsort(
+    kb_similarities
+)[::-1][
+    :TOP_KB_ARTICLES
+]
+
+kb_results = []
+
+for index in top_kb_indices:
+
+    kb_results.append(
+        {
+            "article": knowledge_base[index],
+            "score": float(
+                kb_similarities[index]
+            )
+        }
     )
 
 
-print("\n========== KNOWLEDGE BASE ==========")
+print()
+print("Top Knowledge Base Articles:")
 
-for rank, (score, article) in enumerate(
-    top_kb,
+
+for rank, result in enumerate(
+    kb_results,
     start=1
 ):
 
-    print("\n------------------------------------------")
+    article = result["article"]
 
-    print("Rank:", rank)
+    print()
+    print(f"Rank {rank}")
 
     print(
-        f"Similarity Score: {score:.4f}"
+        f"Similarity: "
+        f"{result['score']:.4f}"
     )
 
     print(
-        "Article ID:",
-        article["article_id"]
+        f"Article: "
+        f"{article['article_id']}"
     )
 
     print(
-        "Title:",
-        article["title"]
-    )
-
-    print("\nRecommended Steps:")
-
-    for step in article["steps"]:
-        print(" -", step)
-
-    print(
-        "\nEscalation:",
-        article["escalation_condition"]
+        f"Title: "
+        f"{article['title']}"
     )
 
 
 # ============================================================
-# BUILD HISTORICAL CONTEXT
+# BUILD RAG CONTEXT
 # ============================================================
 
-historical_context = ""
+print()
+print("==========================================")
+print("BUILDING RAG CONTEXT")
+print("==========================================")
 
-for score, case in top_historical:
+context = ""
 
-    steps = "\n".join(
-        "- " + step
-        for step in case["troubleshooting_steps"]
-    )
+context += "\nKNOWLEDGE BASE:\n"
 
-    historical_context += f"""
-Historical Case ID: {case["case_id"]}
-Similarity Score: {score:.4f}
-Issue Type: {case["issue_type"]}
-Device: {case["device"]}
-Customer Sentiment: {case["sentiment"]}
+for result in kb_results:
 
-Troubleshooting Steps:
-{steps}
+    article = result["article"]
 
-Outcome:
-{case["outcome"]}
-
-Source:
-Historical Case {case["case_id"]}
-
+    context += f"""
+Article ID: {article["article_id"]}
+Title: {article["title"]}
+Problem: {article["problem"]}
+Symptoms: {", ".join(article["symptoms"])}
+Steps: {", ".join(article["steps"])}
+Escalation: {article["escalation_condition"]}
 """
 
 
-# ============================================================
-# BUILD KNOWLEDGE BASE CONTEXT
-# ============================================================
+context += "\nHISTORICAL CASES:\n"
 
-kb_context = ""
+for result in historical_results:
 
-for score, article in top_kb:
+    case = result["case"]
 
-    steps = "\n".join(
-        "- " + step
-        for step in article["steps"]
-    )
-
-    kb_context += f"""
-Knowledge Base Article: {article["article_id"]}
-Similarity Score: {score:.4f}
-Title: {article["title"]}
-
-Problem:
-{article["problem"]}
-
-Recommended Steps:
-{steps}
-
-Escalation Condition:
-{article["escalation_condition"]}
-
-Source:
-{article["article_id"]}
-
+    context += f"""
+Issue: {case.get("issue_type", "N/A")}
+Device: {case.get("device", "N/A")}
+Sentiment: {case.get("sentiment", "N/A")}
+Troubleshooting: {", ".join(case.get("troubleshooting_steps", []))}
+Outcome: {case.get("outcome", "N/A")}
 """
 
 
@@ -536,53 +543,18 @@ Source:
 # ============================================================
 
 prompt = f"""
-You are an intelligent telecom customer support
-resolution assistant.
+You are an intelligent telecom support assistant.
 
-Your job is to produce a grounded resolution using
-ONLY the retrieved evidence below.
-
-STRICT RULES:
-
-1. Do NOT invent troubleshooting steps.
-
-2. Every recommended troubleshooting step must
-come directly from the retrieved knowledge base.
-
-3. You MUST include ALL DISTINCT troubleshooting
-steps from the relevant knowledge-base articles.
-
-4. Do NOT remove or skip a supported troubleshooting
-step just to make the answer shorter.
-
-5. If the same step appears in multiple articles,
-mention it only once.
-
-6. Use the knowledge base as the PRIMARY source
-for troubleshooting recommendations.
-
-7. Use historical cases only as SUPPORTING evidence.
-
-8. Do NOT introduce technical information that is
-not present in the retrieved evidence.
-
-9. If troubleshooting does not resolve the issue,
-use the escalation condition provided by the
-knowledge base.
-
-10. Sources must identify the actual knowledge-base
-articles used.
-
-Customer Complaint:
+Customer complaint:
 {query}
 
-Complaint Analysis:
+Complaint analysis:
 
 Intent:
 {analysis["intent"]}
 
 Category:
-{", ".join(analysis["category"])}
+{", ".join(analysis["categories"])}
 
 Product:
 {analysis["product"]}
@@ -594,62 +566,77 @@ Sentiment:
 {analysis["sentiment"]}
 
 
-RETRIEVED HISTORICAL CASES:
-{historical_context}
+Retrieved information:
+
+{context}
 
 
-RETRIEVED KNOWLEDGE BASE:
-{kb_context}
+Instructions:
 
+1. Provide a short issue summary.
 
-Return the answer in exactly this format:
+2. Give troubleshooting steps supported by
+   the knowledge base.
+
+3. The knowledge base is the primary source
+   for troubleshooting instructions.
+
+4. Historical cases are supporting evidence
+   and should not override the knowledge base.
+
+5. Do not invent troubleshooting steps.
+
+6. Include all distinct relevant troubleshooting
+   steps supported by the retrieved knowledge base.
+
+7. If the issue continues, provide the supported
+   escalation guidance.
+
+8. Do not claim that the issue will definitely
+   be resolved after escalation.
+
+9. Do not invent customer information.
+
+10. Mention the actual knowledge-base article IDs
+    used in the response.
+
+11. Keep the response clear, concise and practical.
+
+Return the answer using exactly this structure:
 
 Issue Summary:
-<short summary>
 
 Recommended Steps:
-1. <step>
-2. <step>
-3. <step>
-4. <step>
 
 Escalation Guidance:
-<explain when escalation is required>
 
 Sources:
-- <knowledge-base article ID and title>
-- <knowledge-base article ID and title>
-
-
-FINAL CHECK:
-
-Make sure every distinct troubleshooting step
-from the retrieved knowledge base is included.
-
-Do not invent unsupported information.
 """
 
 
 # ============================================================
-# GENERATE RESPONSE USING OLLAMA
+# GENERATE RAG RESPONSE USING OLLAMA
 # ============================================================
 
-print("\n==========================================")
-print("       RAG GENERATION")
+print()
+print("==========================================")
+print("GENERATING RAG RESPONSE")
 print("==========================================")
 
-print("\nSending retrieved context to Ollama...")
+print()
+print("Connecting to Ollama...")
 
 
 try:
 
     response = requests.post(
-
-        OLLAMA_URL,
+        "http://localhost:11434/api/generate",
 
         json={
-            "model": MODEL,
+            "model": OLLAMA_MODEL,
+
             "prompt": prompt,
+
             "stream": False,
 
             "options": {
@@ -658,124 +645,80 @@ try:
             }
         },
 
-        timeout=300
-    )
-
-
-    print(
-        "\nOllama status code:",
-        response.status_code
-    )
-
-
-    if response.status_code != 200:
-
-        print("\nOllama returned an error:")
-        print(response.text)
-
-        raise SystemExit
-
-
-    result = response.json()
-
-    generated_answer = result.get(
-        "response",
-        ""
-    ).strip()
-
-
-    if not generated_answer:
-
-        print("\nOllama returned an empty response.")
-        print("\nRaw response:")
-        print(response.text)
-
-        raise SystemExit
-
-
-    # ========================================================
-    # FINAL OUTPUT
-    # ========================================================
-
-    print("\n")
-    print("==========================================")
-    print("       INTELLIGENT SUPPORT ASSISTANT")
-    print("==========================================")
-
-    print("\nCustomer Complaint:")
-    print(query)
-
-    print("\nComplaint Analysis:")
-
-    print(
-        "Intent:",
-        analysis["intent"]
+        timeout=120
     )
 
     print(
-        "Category:",
-        ", ".join(analysis["category"])
+        f"Ollama status: "
+        f"{response.status_code}"
     )
 
-    print(
-        "Product:",
-        analysis["product"]
-    )
+    if response.status_code == 200:
 
-    print(
-        "Severity:",
-        analysis["severity"]
-    )
+        generated_response = (
+            response.json()["response"]
+        )
 
-    print(
-        "Sentiment:",
-        analysis["sentiment"]
-    )
+    else:
 
-    print("\nGenerated Resolution:")
-    print("------------------------------------------")
-
-    print(generated_answer)
-
-    print("\n==========================================")
-    print("       RAG PIPELINE COMPLETED")
-    print("==========================================")
+        generated_response = (
+            "Unable to generate a response "
+            "from Ollama."
+        )
 
 
-except requests.exceptions.Timeout:
+except Exception as error:
 
-    print(
-        "\nERROR: Ollama took too long to respond."
+    generated_response = (
+        f"Ollama connection error: {error}"
     )
 
 
-except requests.exceptions.ConnectionError:
+# ============================================================
+# DISPLAY GENERATED RESPONSE
+# ============================================================
 
-    print(
-        "\nERROR: Could not connect to Ollama."
-    )
+print()
+print("==========================================")
+print("GENERATED RESOLUTION")
+print("==========================================")
 
-    print(
-        "\nMake sure Ollama is running."
-    )
-
-    print(
-        "Test with:"
-    )
-
-    print(
-        "ollama run llama3.2:3b"
-    )
+print()
+print(generated_response)
 
 
-except Exception as e:
+# ============================================================
+# FINAL PIPELINE SUMMARY
+# ============================================================
 
-    print(
-        "\nUnexpected error:"
-    )
+print()
+print("==========================================")
+print("RAG PIPELINE COMPLETED")
+print("==========================================")
 
-    print(
-        type(e).__name__,
-        ":",
-        e
-    )
+print(
+    f"Historical cases searched: "
+    f"{len(historical_cases)}"
+)
+
+print(
+    f"Knowledge-base articles searched: "
+    f"{len(knowledge_base)}"
+)
+
+print(
+    f"Historical cases retrieved: "
+    f"{len(historical_results)}"
+)
+
+print(
+    f"Knowledge-base articles retrieved: "
+    f"{len(kb_results)}"
+)
+
+print(
+    f"Historical embeddings file: "
+    f"{EMBEDDING_FILE}"
+)
+
+print("==========================================")
